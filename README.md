@@ -14,6 +14,23 @@ Hold **Ctrl + system key** (Win on Windows, Cmd on Mac, Super on Linux), speak, 
 
 > The UI messages and the bundled example dictionary are in Brazilian Portuguese, but Ditado works in **any language Whisper supports** — just set `language` in `config.json` (`en`, `es`, `fr`, `null` for auto-detect, etc.).
 
+## Requirements
+
+**Minimum (CPU mode — works on any modern computer):**
+
+- Windows 10/11, macOS, or Linux (X11 session)
+- [Python 3.10+](https://python.org)
+- A microphone
+- ~1 GB free disk (libraries + the `small` model)
+- 8 GB RAM recommended
+- Internet **only during installation**, to download the model once; fully offline afterwards
+
+**Recommended (near-instant transcription):**
+
+- NVIDIA GPU with 4+ GB VRAM — the installer detects it and switches to the larger `large-v3-turbo` model (~4 GB total disk). Without a GPU it falls back to CPU automatically, no config needed.
+
+You do **not** download the model by hand — the installer fetches it for you, and the app re-downloads it on first run if it's missing. The model is **not** stored in this GitHub repo (only the code is); it comes from Hugging Face.
+
 ## Installation
 
 Prerequisite: [Python 3.10+](https://python.org) (on Windows, tick "Add to PATH" during setup).

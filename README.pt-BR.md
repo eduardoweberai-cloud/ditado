@@ -12,6 +12,23 @@ Segure **Ctrl + tecla do sistema** (Win no Windows, Cmd no Mac, Super no Linux),
 - **Atalho configurável:** o combo padrão é Ctrl+Win/Cmd/Super, mas você troca no `config.json`.
 - **Leve:** processo residente com prioridade baixa; não disputa CPU com o que você estiver usando.
 
+## Requisitos
+
+**Mínimo (modo CPU — roda em qualquer computador moderno):**
+
+- Windows 10/11, macOS ou Linux (sessão X11)
+- [Python 3.10+](https://python.org)
+- Um microfone
+- ~1 GB de disco livre (bibliotecas + modelo `small`)
+- 8 GB de RAM recomendado
+- Internet **só na instalação**, pra baixar o modelo uma vez; depois roda 100% offline
+
+**Recomendado (transcrição quase instantânea):**
+
+- GPU NVIDIA com 4+ GB de VRAM — o instalador detecta e usa o modelo maior `large-v3-turbo` (~4 GB de disco no total). Sem GPU, cai pra CPU sozinho, sem precisar configurar nada.
+
+Você **não** baixa o modelo na mão: o instalador busca pra você, e o app rebaixa no primeiro uso se estiver faltando. O modelo **não** fica neste repositório do GitHub (só o código fica); ele vem do Hugging Face.
+
 ## Instalação
 
 Pré-requisito: [Python 3.10+](https://python.org) (no Windows, marque "Add to PATH" ao instalar).
