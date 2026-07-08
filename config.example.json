@@ -1,0 +1,22 @@
+{
+  "model_size": "small",
+  "device": "cpu",
+  "compute_type": "int8",
+  "language": "pt",
+  "beam_size": 1,
+  "cpu_threads": 6,
+  "insert_mode": "paste",
+  "restore_clipboard": true,
+  "trailing_space": true,
+  "beeps": false,
+  "wave_gain": 12,
+  "log_text": false,
+  "min_seconds": 0.35,
+  "max_seconds": 120,
+  "samplerate": 16000,
+  "post_process": false,
+  "ollama_url": "http://localhost:11434",
+  "ollama_model": "gemma3:4b",
+  "ollama_keep_alive": "2h",
+  "ollama_timeout": 15
+}

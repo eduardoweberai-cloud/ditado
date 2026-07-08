@@ -1,0 +1,11 @@
+# Normaliza fins de linha por tipo (repo cross-platform)
+* text=auto
+
+# Scripts shell e Python DEVEM ter LF (CRLF quebra bash no Linux/macOS)
+*.sh   text eol=lf
+*.py   text eol=lf
+
+# Scripts nativos do Windows ficam com CRLF
+*.ps1  text eol=crlf
+*.bat  text eol=crlf
+*.vbs  text eol=crlf

@@ -1,0 +1,15 @@
+# Runtime e privacidade: log pode conter textos ditados (log_text=true)
+ditado.log
+__pycache__/
+*.pyc
+.venv/
+
+# Config e dicionário são pessoais; versionar só os .example
+config.json
+dicionario.txt
+
+# Launchers gerados pelo instalador (contêm paths locais)
+iniciar-ditado.vbs
+parar-ditado.bat
+ditado-start.sh
+ditado-stop.sh

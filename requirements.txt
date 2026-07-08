@@ -1,0 +1,6 @@
+# Core (Windows, macOS e Linux)
+faster-whisper==1.2.1
+sounddevice==0.5.5
+pynput==1.8.2
+pyperclip==1.11.0
+numpy==2.4.3

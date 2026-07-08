@@ -1,0 +1,13 @@
+# Dicionário pessoal do ditado: um termo por linha.
+# O Whisper favorece essas palavras na transcrição (jargão, nomes, marcas).
+# Copie este arquivo para dicionario.txt, edite à vontade e reinicie o ditado.
+# Exemplos:
+deploy
+branch
+commit
+push
+pull request
+dashboard
+frontend
+backend
+landing page
