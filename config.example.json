@@ -4,6 +4,7 @@
   "compute_type": "int8",
   "language": "pt",
   "beam_size": 1,
+  "hotkey": "ctrl+sys",
   "cpu_threads": 6,
   "insert_mode": "paste",
   "restore_clipboard": true,

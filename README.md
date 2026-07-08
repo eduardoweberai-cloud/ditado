@@ -1,19 +1,24 @@
 # Ditado
 
-Ditado por voz **100% local e gratuito**, estilo Wispr Flow, para **Windows, macOS e Linux**.
+English · **[Português](README.pt-BR.md)**
 
-Segure **Ctrl + tecla do sistema** (Win no Windows, Cmd no Mac, Super no Linux), fale, solte: o texto aparece onde o cursor estiver, em qualquer aplicativo. Um pill discreto no rodapé mostra a waveform da sua voz enquanto grava.
+**100% local, free voice dictation**, in the spirit of Wispr Flow, for **Windows, macOS, and Linux**.
 
-- **Offline de verdade:** o áudio nunca sai da sua máquina. Sem conta, sem assinatura, sem telemetria.
-- **Precisão de topo:** Whisper `large-v3-turbo` na GPU NVIDIA (detectada automaticamente) ou `small` na CPU.
-- **Dicionário pessoal:** ensine seu jargão, nomes e marcas (como o dicionário do Wispr).
-- **Leve:** processo residente com prioridade baixa; não disputa CPU com o que você estiver usando.
+Hold **Ctrl + system key** (Win on Windows, Cmd on Mac, Super on Linux), speak, release: the text appears wherever your cursor is, in any app. A discreet pill at the bottom of the screen shows your voice as a live waveform while recording.
 
-## Instalação
+- **Truly offline:** audio never leaves your machine. No account, no subscription, no telemetry.
+- **Top accuracy:** Whisper `large-v3-turbo` on NVIDIA GPU (auto-detected) or `small` on CPU.
+- **Personal dictionary:** teach it your jargon, names, and brands (like Wispr's dictionary).
+- **Configurable hotkey:** default is Ctrl+Win/Cmd/Super, changeable in `config.json`.
+- **Lightweight:** a resident process at low priority; it won't fight your apps for CPU.
 
-Pré-requisito: [Python 3.10+](https://python.org) (no Windows, marque "Add to PATH" ao instalar).
+> The UI messages and the bundled example dictionary are in Brazilian Portuguese, but Ditado works in **any language Whisper supports** — just set `language` in `config.json` (`en`, `es`, `fr`, `null` for auto-detect, etc.).
 
-O instalador cria um ambiente isolado (`.venv`), instala as dependências, detecta GPU NVIDIA, **baixa o modelo de voz** (uma vez só, ~500MB CPU ou ~1,6GB GPU, do Hugging Face) e gera os scripts de iniciar/parar. Nada é instalado fora da pasta do projeto além do modelo (cache padrão do Hugging Face).
+## Installation
+
+Prerequisite: [Python 3.10+](https://python.org) (on Windows, tick "Add to PATH" during setup).
+
+The installer creates an isolated environment (`.venv`), installs dependencies, detects an NVIDIA GPU, **downloads the speech model** (once, ~500MB CPU or ~1.6GB GPU, from Hugging Face), and generates start/stop scripts. Nothing is installed outside the project folder except the model (Hugging Face's default cache).
 
 ### Windows
 
@@ -21,7 +26,7 @@ O instalador cria um ambiente isolado (`.venv`), instala as dependências, detec
 powershell -ExecutionPolicy Bypass -File install.ps1 -Autostart
 ```
 
-Depois: dê dois cliques em `iniciar-ditado.vbs`. O `-Autostart` faz iniciar junto com o Windows (opcional).
+Then double-click `iniciar-ditado.vbs`. `-Autostart` makes it launch with Windows (optional).
 
 ### macOS
 
@@ -30,7 +35,7 @@ bash install.sh --autostart
 ./ditado-start.sh
 ```
 
-Na primeira execução o macOS vai pedir permissões. Conceda ao Terminal (ou ao Python) em **Ajustes → Privacidade e Segurança**: **Microfone**, **Acessibilidade** e **Monitoramento de Entrada** (necessários para o atalho global e para colar o texto). Sem CUDA no Mac: roda em CPU.
+On first run macOS will ask for permissions. Grant Terminal (or Python), under **Settings → Privacy & Security**: **Microphone**, **Accessibility**, and **Input Monitoring** (needed for the global hotkey and to paste text). No CUDA on Mac: it runs on CPU.
 
 ### Linux
 
@@ -39,80 +44,91 @@ bash install.sh --autostart
 ./ditado-start.sh
 ```
 
-Requisitos: sessão **X11** (no Wayland puro, atalhos globais são bloqueados pelo compositor), `python3-tk` e `xclip` (`sudo apt install python3-tk xclip`). Com GPU NVIDIA + driver, o instalador configura CUDA sozinho.
+Requirements: an **X11** session (on pure Wayland, global hotkeys are blocked by the compositor), plus `python3-tk` and `xclip` (`sudo apt install python3-tk xclip`). With an NVIDIA GPU + driver, the installer configures CUDA automatically.
 
-## Uso
+## Usage
 
-1. Posicione o cursor onde quer o texto (chat, editor, browser, qualquer campo).
-2. **Segure** `Ctrl + Win/Cmd/Super` e fale: o pill mostra sua voz ao vivo.
-3. **Solte**: a onda fica âmbar enquanto transcreve e o texto é colado no cursor (flash verde).
+1. Place your cursor where you want the text (chat, editor, browser, any field).
+2. **Hold** the hotkey (default `Ctrl + Win/Cmd/Super`) and speak: the pill shows your voice live.
+3. **Release**: the wave turns amber while transcribing, then the text is pasted at the cursor (green flash).
 
 Extras:
 
-- `Ctrl+Win/Cmd/Super` + qualquer outra tecla **cancela** a gravação: seus atalhos do sistema (ex: trocar de desktop virtual) continuam funcionando.
-- Sair do app: `Ctrl+Alt+F12`, ou `parar-ditado.bat` (Windows) / `./ditado-stop.sh` (Mac/Linux).
-- Trocou de microfone (plugou um headset)? A próxima gravação já usa o novo input padrão do sistema, sozinho.
+- Hotkey + any other key **cancels** the recording, so your system shortcuts (e.g. switching virtual desktops) keep working.
+- Quit the app: `Ctrl+Alt+F12`, or `parar-ditado.bat` (Windows) / `./ditado-stop.sh` (Mac/Linux).
+- Plugged in a headset? The next recording uses the new system default input automatically.
 
-## Dicionário pessoal (`dicionario.txt`)
+## Changing the hotkey
 
-Um termo por linha (jargão, nomes próprios, marcas). O Whisper favorece esses termos ao decodificar. Palavra saindo errada toda vez? Adicione aqui e reinicie o ditado.
+Edit `hotkey` in `config.json` and restart Ditado. Combine `ctrl`, `alt`, `shift`, and `sys` (the system key: Win/Cmd/Super) with `+`:
+
+```json
+"hotkey": "ctrl+shift"
+```
+
+Examples: `ctrl+sys` (default), `ctrl+shift`, `alt+shift`, `ctrl+alt`. Avoid exactly `ctrl+alt`, which collides with the quit shortcut (`Ctrl+Alt+F12`).
+
+## Personal dictionary (`dicionario.txt`)
+
+One term per line (jargon, proper nouns, brands). Whisper favors these terms when decoding. A word coming out wrong every time? Add it here and restart Ditado.
 
 ```
-# exemplos
+# examples
 deploy
 pull request
-Nome Da Sua Empresa
+Your Company Name
 ```
 
-## Configuração (`config.json`)
+## Configuration (`config.json`)
 
-Criado pelo instalador a partir do `config.example.json`. Edite e reinicie o ditado.
+Created by the installer from `config.example.json`. Edit and restart Ditado.
 
-| Chave | Default | Notas |
+| Key | Default | Notes |
 |---|---|---|
-| `model_size` | `small` (CPU) / `large-v3-turbo` (GPU) | Qualquer modelo do faster-whisper |
-| `device` | `cpu` / `cuda` | Definido pelo instalador; com falha de GPU, cai sozinho pra CPU |
+| `model_size` | `small` (CPU) / `large-v3-turbo` (GPU) | Any faster-whisper model |
+| `device` | `cpu` / `cuda` | Set by the installer; on GPU failure it falls back to CPU by itself |
 | `compute_type` | `int8` (CPU) / `int8_float16` (GPU) | |
-| `language` | `pt` | Troque pelo seu idioma (`en`, `es`...) ou `null` = detecção automática |
-| `beam_size` | `1` (CPU) / `5` (GPU) | Maior = mais preciso e mais lento |
-| `insert_mode` | `paste` | `paste` (clipboard + Ctrl/Cmd+V) ou `type` (digitação simulada) |
-| `restore_clipboard` | `true` | Restaura o clipboard anterior após colar |
-| `trailing_space` | `true` | Espaço ao final, para emendar ditados |
-| `wave_gain` | `12` | Sensibilidade visual da waveform |
-| `beeps` | `false` | Sinais sonoros de início/fim (só Windows) |
-| `log_text` | `false` | `true` grava os textos ditados no `ditado.log` (útil pra debug, pior pra privacidade) |
-| `max_seconds` | `120` | Teto de gravação (proteção contra tecla presa) |
-| `post_process` | `false` | Camada opcional de correção via LLM local ([Ollama](https://ollama.com)); adiciona latência |
+| `language` | `pt` | Set your language (`en`, `es`...) or `null` for auto-detect |
+| `beam_size` | `1` (CPU) / `5` (GPU) | Higher = more accurate and slower |
+| `hotkey` | `ctrl+sys` | Dictation hotkey (hold). Combine `ctrl`, `alt`, `shift`, `sys` with `+` |
+| `insert_mode` | `paste` | `paste` (clipboard + Ctrl/Cmd+V) or `type` (simulated typing) |
+| `restore_clipboard` | `true` | Restores the previous clipboard after pasting |
+| `trailing_space` | `true` | Trailing space, to chain dictations |
+| `wave_gain` | `12` | Visual sensitivity of the waveform |
+| `beeps` | `false` | Start/stop sound cues (Windows only) |
+| `log_text` | `false` | `true` writes dictated text to `ditado.log` (handy for debugging, worse for privacy) |
+| `max_seconds` | `120` | Recording cap (guards against a stuck key) |
+| `post_process` | `false` | Optional correction layer via a local LLM ([Ollama](https://ollama.com)); adds latency |
 
-## Privacidade e segurança
+## Privacy & security
 
-- **Nenhum dado sai da máquina.** A única conexão de rede do projeto é o download do modelo no Hugging Face durante a instalação (e uma checagem de versão do modelo ao iniciar, que falha sem quebrar nada se você estiver offline).
-- **Sem chaves de API, sem contas, sem telemetria, sem portas abertas.** O código é um único arquivo (`ditado.py`) que você pode auditar.
-- **Hook global de teclado:** é o que permite o atalho funcionar em qualquer app: a biblioteca `pynput` escuta as teclas pressionadas. O app só reage à combinação do ditado e descarta o resto; nada é gravado (não é um keylogger, e o código está aí pra conferir). Antivírus ocasionalmente sinalizam hooks de teclado; é um falso positivo esperado nessa categoria de ferramenta (qualquer app de hotkey/ditado usa o mesmo mecanismo).
-- **Log:** por default o `ditado.log` registra só métricas (duração, tempo de processamento). Os textos ditados só entram no log se você ligar `log_text`.
+- **No data leaves your machine.** The project's only network connection is downloading the model from Hugging Face during installation (plus a model-version check on startup, which fails harmlessly if you're offline).
+- **No API keys, no accounts, no telemetry, no open ports.** The code is a single file (`ditado.py`) you can audit.
+- **Global keyboard hook:** this is what lets the hotkey work in any app — the `pynput` library listens for key presses. The app only reacts to the dictation combo and discards the rest; nothing is recorded (it is not a keylogger, and the code is right there to check). Antivirus tools occasionally flag keyboard hooks; that's an expected false positive for this class of tool (any hotkey/dictation app uses the same mechanism).
+- **Log:** by default `ditado.log` records only metrics (duration, processing time). Dictated text is logged only if you enable `log_text`.
 
-## Performance (referência: i5-12450HX + RTX 3050 6GB)
+## Performance (reference: i5-12450HX + RTX 3050 6GB)
 
-| Config | 14s de fala | Precisão |
+| Config | 14s of speech | Accuracy |
 |---|---|---|
-| large-v3-turbo GPU | ~0,9s | topo de linha, jargão intacto |
-| small CPU | ~3,0s | boa, tropeça em jargão |
+| large-v3-turbo GPU | ~0.9s | top-tier, jargon intact |
+| small CPU | ~3.0s | good, stumbles on jargon |
 
-RAM: ~800MB residente. VRAM (modo GPU): ~1,5GB. Boot: 5 a 60s carregando o modelo (uma vez por login).
+RAM: ~800MB resident. VRAM (GPU mode): ~1.5GB. Boot: 5 to 60s loading the model (once per login).
 
 ## Troubleshooting
 
-- **Nada acontece ao soltar as teclas:** veja `ditado.log`. "nao captei fala" = o VAD não detectou voz (mic mudo? confira o input padrão do sistema).
-- **macOS: atalho não dispara:** falta permissão de Acessibilidade/Monitoramento de Entrada (Ajustes → Privacidade e Segurança). Feche e reabra o app depois de conceder.
-- **Linux: não digita/cola:** confirme sessão X11 (`echo $XDG_SESSION_TYPE`) e `xclip` instalado.
-- **Texto não cola em app rodando como admin (Windows):** limitação do SO; rode o ditado como admin se precisar ditar em apps elevados.
-- **GPU não usada:** confira `nvidia-smi` e o `ditado.log` (linha "fallback small/cpu" indica falha de CUDA; o app segue funcionando em CPU).
-- **Palavra técnica sai errada:** adicione ao `dicionario.txt`.
+- **Nothing happens on release:** check `ditado.log`. "nao captei fala" = the VAD detected no voice (mic muted? check the system's default input).
+- **macOS: hotkey doesn't fire:** missing Accessibility/Input Monitoring permission (Settings → Privacy & Security). Quit and relaunch the app after granting it.
+- **Linux: won't type/paste:** confirm an X11 session (`echo $XDG_SESSION_TYPE`) and that `xclip` is installed.
+- **Text won't paste into an app running as admin (Windows):** OS limitation; run Ditado as admin if you need to dictate into elevated apps.
+- **GPU not used:** check `nvidia-smi` and `ditado.log` (a "fallback small/cpu" line means CUDA failed; the app keeps working on CPU).
+- **A technical word comes out wrong:** add it to `dicionario.txt`.
 
-## Desinstalação
+## Uninstall
 
-Pare o app, remova a pasta do projeto e, se ativou autostart: Windows `shell:startup` → `ditado.vbs`; macOS `~/Library/LaunchAgents/com.ditado.dictation.plist`; Linux `~/.config/autostart/ditado.desktop`. Modelo baixado: `~/.cache/huggingface/hub` (Windows: `%USERPROFILE%\.cache\huggingface\hub`).
+Stop the app, delete the project folder, and if you enabled autostart: Windows `shell:startup` → `ditado.vbs`; macOS `~/Library/LaunchAgents/com.ditado.dictation.plist`; Linux `~/.config/autostart/ditado.desktop`. Downloaded model: `~/.cache/huggingface/hub` (Windows: `%USERPROFILE%\.cache\huggingface\hub`).
 
-## Licença
+## License
 
 [MIT](LICENSE)

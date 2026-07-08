@@ -54,6 +54,7 @@ DEFAULTS = {
     "compute_type": "int8",
     "language": "pt",
     "beam_size": 1,
+    "hotkey": "ctrl+sys",
     "cpu_threads": max(2, (os.cpu_count() or 4) // 2),
     "insert_mode": "paste",
     "restore_clipboard": True,
@@ -122,6 +123,37 @@ COLOR_ERR = "#e74c3c"
 CTRL_KEYS = {pkb.Key.ctrl, pkb.Key.ctrl_l, pkb.Key.ctrl_r}
 SYS_KEYS = {pkb.Key.cmd, pkb.Key.cmd_l, pkb.Key.cmd_r}
 ALT_KEYS = {pkb.Key.alt, pkb.Key.alt_l, pkb.Key.alt_r, pkb.Key.alt_gr}
+SHIFT_KEYS = {pkb.Key.shift, pkb.Key.shift_l, pkb.Key.shift_r}
+
+# tokens do config "hotkey" -> conjunto de teclas pynput + rotulo amigavel.
+# "sys" e a tecla do sistema (Win no Windows, Cmd no Mac, Super no Linux).
+MOD_KEYS = {
+    "ctrl": CTRL_KEYS,
+    "alt": ALT_KEYS,
+    "shift": SHIFT_KEYS,
+    "sys": SYS_KEYS,
+}
+MOD_ALIASES = {
+    "control": "ctrl", "ctl": "ctrl",
+    "win": "sys", "windows": "sys", "cmd": "sys", "command": "sys",
+    "super": "sys", "meta": "sys",
+    "option": "alt", "opt": "alt",
+}
+MOD_LABELS = {"ctrl": "Ctrl", "alt": "Alt", "shift": "Shift", "sys": SYS_LABEL}
+
+
+def parse_hotkey(spec):
+    """'ctrl+sys' -> (['ctrl','sys'], 'Ctrl+Win'). Tokens invalidos sao
+    ignorados; vazio cai no default ctrl+sys."""
+    tokens = []
+    for raw in str(spec).lower().replace(" ", "").split("+"):
+        tok = MOD_ALIASES.get(raw, raw)
+        if tok in MOD_KEYS and tok not in tokens:
+            tokens.append(tok)
+    if not tokens:
+        tokens = ["ctrl", "sys"]
+    label = "+".join(MOD_LABELS[t] for t in tokens)
+    return tokens, label
 
 
 def add_cuda_dll_dirs():
@@ -420,52 +452,56 @@ class App:
         self.kb = pkb.Controller()
         self.listener = None
         self.active = False
-        self.ctrl = False
-        self.win = False
-        self.alt = False
         self._watchdog = None
+        self.hotkey_mods, self.hotkey_label = parse_hotkey(self.cfg["hotkey"])
+        # estado "esta pressionada?" de cada modificador do atalho + do alt
+        # (alt entra sempre por causa do quit Ctrl+Alt+F12)
+        self.held = {m: False for m in set(self.hotkey_mods) | {"ctrl", "alt"}}
+        logging.info("atalho de ditado: segurar %s", self.hotkey_label)
         self.hotwords = load_hotwords()
         if self.hotwords:
             logging.info("dicionario carregado: %s", self.hotwords)
+
+    def _mods_for(self, key):
+        return [m for m, keys in MOD_KEYS.items() if key in keys]
+
+    def _hotkey_down(self):
+        return all(self.held.get(m) for m in self.hotkey_mods)
 
     def _mic_level(self):
         # RMS -> altura de barra: curva suave pra fala normal preencher o pill
         x = min(1.0, self.recorder.level * self.cfg["wave_gain"])
         return x ** 0.7
 
-    # ---- hotkey (segurar Ctrl + Win/Cmd/Super) ----
+    # ---- hotkey (segurar a combinacao configurada em cfg["hotkey"]) ----
 
     def on_press(self, key):
         try:
-            if key in CTRL_KEYS:
-                self.ctrl = True
-            elif key in SYS_KEYS:
-                self.win = True
-            elif key in ALT_KEYS:
-                self.alt = True
+            mods = self._mods_for(key)
+            if mods:
+                for m in mods:
+                    self.held[m] = True
             else:
-                if self.ctrl and self.alt and key == pkb.Key.f12:
+                # tecla nao-modificadora
+                if self.held.get("ctrl") and self.held.get("alt") \
+                        and key == pkb.Key.f12:
                     self.quit()
                     return
                 if self.active:
-                    # Ctrl+Sys+outra tecla = atalho do sistema (ex: trocar
-                    # desktop virtual), nao ditado: cancela sem transcrever
+                    # atalho do sistema (ex: trocar desktop virtual), nao
+                    # ditado: cancela sem transcrever
                     self._cancel()
                     return
-            if self.ctrl and self.win and not self.active:
+            if self._hotkey_down() and not self.active:
                 self._start()
         except Exception:
             logging.exception("erro no on_press")
 
     def on_release(self, key):
         try:
-            if key in CTRL_KEYS:
-                self.ctrl = False
-            elif key in SYS_KEYS:
-                self.win = False
-            elif key in ALT_KEYS:
-                self.alt = False
-            if self.active and not (self.ctrl and self.win):
+            for m in self._mods_for(key):
+                self.held[m] = False
+            if self.active and not self._hotkey_down():
                 self._finish()
         except Exception:
             logging.exception("erro no on_release")
@@ -545,7 +581,7 @@ class App:
             return
         self.model_ready.set()
         self.overlay.flash(
-            f"ditado pronto: segure Ctrl+{SYS_LABEL} e fale", COLOR_OK, 2500)
+            f"ditado pronto: segure {self.hotkey_label} e fale", COLOR_OK, 2500)
         if self.cfg["post_process"]:
             threading.Thread(target=self._warmup_polish, daemon=True).start()
         while True:
