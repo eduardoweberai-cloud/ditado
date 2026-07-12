@@ -141,6 +141,30 @@ MOD_ALIASES = {
 }
 MOD_LABELS = {"ctrl": "Ctrl", "alt": "Alt", "shift": "Shift", "sys": SYS_LABEL}
 
+# Virtual-Key codes p/ ler o estado FISICO de cada modificador no Windows.
+# GetAsyncKeyState reconcilia releases que o listener global perde: combos
+# com a tecla Win engolem o keyup, deixando o modificador "preso" em held.
+_VK_FOR_MOD = {
+    "ctrl": (0x11,),          # VK_CONTROL
+    "alt": (0x12,),           # VK_MENU
+    "shift": (0x10,),         # VK_SHIFT
+    "sys": (0x5B, 0x5C),      # VK_LWIN, VK_RWIN
+}
+
+if IS_WIN:
+    _user32 = ctypes.windll.user32
+    _user32.GetAsyncKeyState.restype = ctypes.c_short
+    _user32.GetAsyncKeyState.argtypes = (ctypes.c_int,)
+
+    def mod_physically_down(mod):
+        """True/False: o modificador esta fisicamente pressionado agora."""
+        return any(_user32.GetAsyncKeyState(vk) & 0x8000
+                   for vk in _VK_FOR_MOD.get(mod, ()))
+else:
+    def mod_physically_down(mod):
+        # macOS/Linux: sem reconciliacao (nao testados); mantem o held atual
+        return None
+
 
 def parse_hotkey(spec):
     """'ctrl+sys' -> (['ctrl','sys'], 'Ctrl+Win'). Tokens invalidos sao
@@ -468,6 +492,15 @@ class App:
     def _hotkey_down(self):
         return all(self.held.get(m) for m in self.hotkey_mods)
 
+    def _sync_held(self):
+        """Reconcilia held com o teclado real (Windows). Sem isso, um release
+        perdido (comum em combos com a tecla Win) deixa o modificador preso e
+        QUALQUER tecla passa a satisfazer _hotkey_down() e disparar o ditado."""
+        for m in self.held:
+            state = mod_physically_down(m)
+            if state is not None:
+                self.held[m] = state
+
     def _mic_level(self):
         # RMS -> altura de barra: curva suave pra fala normal preencher o pill
         x = min(1.0, self.recorder.level * self.cfg["wave_gain"])
@@ -477,6 +510,7 @@ class App:
 
     def on_press(self, key):
         try:
+            self._sync_held()
             mods = self._mods_for(key)
             if mods:
                 for m in mods:
@@ -499,6 +533,7 @@ class App:
 
     def on_release(self, key):
         try:
+            self._sync_held()
             for m in self._mods_for(key):
                 self.held[m] = False
             if self.active and not self._hotkey_down():
