@@ -47,6 +47,7 @@ UI_FONT = ("Helvetica Neue" if IS_MAC else
 BASE = os.path.dirname(os.path.abspath(__file__))
 CONFIG_PATH = os.path.join(BASE, "config.json")
 LOG_PATH = os.path.join(BASE, "ditado.log")
+HISTORY_PATH = os.path.join(BASE, "historico.jsonl")
 
 DEFAULTS = {
     "model_size": "small",
@@ -55,10 +56,15 @@ DEFAULTS = {
     "language": "pt",
     "beam_size": 1,
     "hotkey": "ctrl+sys",
+    "history_hotkey": "ctrl+alt+h",
     "cpu_threads": max(2, (os.cpu_count() or 4) // 2),
     "insert_mode": "paste",
-    "restore_clipboard": True,
+    # False: o texto ditado fica no clipboard como rede de seguranca (Ctrl+V
+    # manual recupera se o paste nao achou um campo de texto). True restaura o
+    # clipboard anterior, mas ai um paste que falha perde o ditado.
+    "restore_clipboard": False,
     "trailing_space": True,
+    "max_history": 200,
     "beeps": False,
     "wave_gain": 12,
     "log_text": False,
@@ -178,6 +184,23 @@ def parse_hotkey(spec):
         tokens = ["ctrl", "sys"]
     label = "+".join(MOD_LABELS[t] for t in tokens)
     return tokens, label
+
+
+def parse_combo_key(spec, default_mods, default_char):
+    """'ctrl+alt+h' -> ({'ctrl','alt'}, 'h'). Combina modificadores + uma
+    tecla comum (letra/numero). Usado pelo atalho da janela de historico."""
+    mods, char = set(), None
+    for raw in str(spec).lower().replace(" ", "").split("+"):
+        tok = MOD_ALIASES.get(raw, raw)
+        if tok in MOD_KEYS:
+            mods.add(tok)
+        elif len(raw) == 1:
+            char = raw
+    if not mods or char is None:
+        mods, char = set(default_mods), default_char
+    label = "+".join(MOD_LABELS[t] for t in ("ctrl", "alt", "shift", "sys")
+                     if t in mods) + "+" + char.upper()
+    return mods, char, label
 
 
 def add_cuda_dll_dirs():
@@ -361,6 +384,7 @@ class Overlay:
         self._queue = queue.Queue()
         self._mode = None  # None | "text" | "record" | "busy" | "done"
         self._flash_job = None
+        self._hist_win = None  # janela de historico de ditados (Toplevel)
         self._history = collections.deque([0.0] * NBARS, maxlen=NBARS)
         self._t0 = time.monotonic()
         self.root.after(50, self._poll)
@@ -379,6 +403,9 @@ class Overlay:
     def hide(self):
         self._queue.put(("hide", None, None, None))
 
+    def open_history(self, items):
+        self._queue.put(("history", items, None, None))
+
     # --- thread do tkinter ---
 
     def _poll(self):
@@ -394,6 +421,8 @@ class Overlay:
                     self._flash_job = self.root.after(c, self._do_hide)
                 elif cmd == "hide":
                     self._do_hide()
+                elif cmd == "history":
+                    self._show_history(a)
         except queue.Empty:
             pass
         if self._mode in ("record", "busy", "done"):
@@ -464,6 +493,96 @@ class Overlay:
         self._mode = None
         self.root.withdraw()
 
+    def _show_history(self, items):
+        """Janela com o historico de ditados: lista selecionavel, mais recente
+        no topo, com Copiar por item e Copiar tudo. Roda na thread do tkinter."""
+        if self._hist_win is not None:
+            try:
+                self._hist_win.destroy()
+            except Exception:
+                pass
+            self._hist_win = None
+        win = tk.Toplevel(self.root)
+        self._hist_win = win
+        win.title("Historico de ditados")
+        win.configure(bg="#151515")
+        win.geometry("660x440")
+        win.attributes("-topmost", True)
+
+        texts = [it.get("text", "") for it in items]
+
+        tk.Label(win, text="Duplo-clique ou Enter copia o item. Esc fecha.",
+                 bg="#151515", fg="#9a9a9a", font=(UI_FONT, 9),
+                 anchor="w").pack(fill="x", padx=12, pady=(10, 4))
+
+        frame = tk.Frame(win, bg="#151515")
+        frame.pack(fill="both", expand=True, padx=12)
+        sb = tk.Scrollbar(frame)
+        sb.pack(side="right", fill="y")
+        lb = tk.Listbox(
+            frame, bg="#1e1e1e", fg="#ffffff", font=(UI_FONT, 10),
+            yscrollcommand=sb.set, selectbackground="#3a6df0",
+            activestyle="none", highlightthickness=0, borderwidth=0)
+        if items:
+            for it in items:
+                ts = (it.get("ts") or "")[11:16]
+                preview = " ".join((it.get("text") or "").split())[:96]
+                lb.insert("end", f"  {ts}   {preview}")
+        else:
+            lb.insert("end", "  (nenhum ditado ainda)")
+        lb.pack(side="left", fill="both", expand=True)
+        sb.config(command=lb.yview)
+
+        status = tk.Label(
+            win, text=f"{len(items)} ditado(s) no historico",
+            bg="#151515", fg="#9a9a9a", font=(UI_FONT, 9), anchor="w")
+        status.pack(fill="x", padx=12, pady=(4, 0))
+
+        def copy_sel(event=None):
+            sel = lb.curselection()
+            if not sel or not texts:
+                return
+            try:
+                pyperclip.copy(texts[sel[0]])
+                status.config(text="copiado para a area de transferencia!",
+                              fg=COLOR_OK)
+            except Exception:
+                status.config(text="falha ao copiar", fg=COLOR_ERR)
+
+        def copy_all(event=None):
+            if not texts:
+                return
+            try:
+                pyperclip.copy("\n\n".join(texts))
+                status.config(text="tudo copiado!", fg=COLOR_OK)
+            except Exception:
+                status.config(text="falha ao copiar", fg=COLOR_ERR)
+
+        def close():
+            self._hist_win = None
+            win.destroy()
+
+        btns = tk.Frame(win, bg="#151515")
+        btns.pack(fill="x", padx=12, pady=10)
+        tk.Button(btns, text="Copiar selecionado", command=copy_sel).pack(
+            side="left")
+        tk.Button(btns, text="Copiar tudo", command=copy_all).pack(
+            side="left", padx=6)
+        tk.Button(btns, text="Fechar", command=close).pack(side="right")
+
+        lb.bind("<Double-Button-1>", copy_sel)
+        lb.bind("<Return>", copy_sel)
+        win.bind("<Escape>", lambda e: close())
+        win.protocol("WM_DELETE_WINDOW", close)
+
+        if items:
+            lb.selection_set(0)
+        lb.focus_set()
+        win.update_idletasks()
+        win.deiconify()
+        win.lift()
+        win.focus_force()
+
 
 class App:
     def __init__(self):
@@ -478,10 +597,16 @@ class App:
         self.active = False
         self._watchdog = None
         self.hotkey_mods, self.hotkey_label = parse_hotkey(self.cfg["hotkey"])
-        # estado "esta pressionada?" de cada modificador do atalho + do alt
-        # (alt entra sempre por causa do quit Ctrl+Alt+F12)
-        self.held = {m: False for m in set(self.hotkey_mods) | {"ctrl", "alt"}}
+        self.history_mods, self.history_char, self.history_label = \
+            parse_combo_key(self.cfg.get("history_hotkey", "ctrl+alt+h"),
+                            {"ctrl", "alt"}, "h")
+        self._history_key = pkb.KeyCode.from_char(self.history_char)
+        # estado "esta pressionada?" de cada modificador usado + ctrl/alt
+        # (ctrl/alt entram sempre por causa do quit Ctrl+Alt+F12)
+        self.held = {m: False for m in
+                     set(self.hotkey_mods) | self.history_mods | {"ctrl", "alt"}}
         logging.info("atalho de ditado: segurar %s", self.hotkey_label)
+        logging.info("atalho de historico: %s", self.history_label)
         self.hotwords = load_hotwords()
         if self.hotwords:
             logging.info("dicionario carregado: %s", self.hotwords)
@@ -506,6 +631,37 @@ class App:
         x = min(1.0, self.recorder.level * self.cfg["wave_gain"])
         return x ** 0.7
 
+    def _save_history(self, text):
+        """Grava cada ditado em disco ANTES de tentar colar: rede de seguranca
+        para nunca perder o texto se o paste nao achar um campo em foco."""
+        try:
+            with open(HISTORY_PATH, "a", encoding="utf-8") as f:
+                f.write(json.dumps(
+                    {"ts": time.strftime("%Y-%m-%d %H:%M:%S"), "text": text},
+                    ensure_ascii=False) + "\n")
+        except Exception:
+            logging.exception("falha salvando historico")
+
+    def _load_history(self):
+        """Ultimas entradas do historico, mais recente primeiro (p/ a janela)."""
+        items = []
+        try:
+            with open(HISTORY_PATH, "r", encoding="utf-8") as f:
+                for line in f:
+                    line = line.strip()
+                    if not line:
+                        continue
+                    try:
+                        items.append(json.loads(line))
+                    except Exception:
+                        pass
+        except FileNotFoundError:
+            pass
+        except Exception:
+            logging.exception("falha lendo historico")
+        limit = self.cfg.get("max_history", 200)
+        return items[-limit:][::-1]
+
     # ---- hotkey (segurar a combinacao configurada em cfg["hotkey"]) ----
 
     def on_press(self, key):
@@ -520,6 +676,10 @@ class App:
                 if self.held.get("ctrl") and self.held.get("alt") \
                         and key == pkb.Key.f12:
                     self.quit()
+                    return
+                if key == self._history_key and \
+                        all(self.held.get(m) for m in self.history_mods):
+                    self.overlay.open_history(self._load_history())
                     return
                 if self.active:
                     # atalho do sistema (ex: trocar desktop virtual), nao
@@ -662,6 +822,7 @@ class App:
                                  time.monotonic() - t1, final)
                 else:
                     logging.info("polish %.1fs", time.monotonic() - t1)
+        self._save_history(final)
         self._insert(final + (" " if self.cfg["trailing_space"] else ""))
         self.overlay.wave("done")
 

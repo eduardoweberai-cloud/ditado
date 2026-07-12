@@ -71,6 +71,7 @@ Extras:
 
 - Atalho + qualquer outra tecla **cancela** a gravação: seus atalhos do sistema (ex: trocar de desktop virtual) continuam funcionando.
 - Sair do app: `Ctrl+Alt+F12`, ou `parar-ditado.bat` (Windows) / `./ditado-stop.sh` (Mac/Linux).
+- **Histórico (nunca perca um ditado):** `Ctrl+Alt+H` abre uma janela com tudo que você ditou, cada item com botão de copiar. Todo ditado é salvo em `historico.jsonl`, então mesmo que a colagem não ache um campo de texto em foco, o texto continua lá pra você copiar.
 - Trocou de microfone (plugou um headset)? A próxima gravação já usa o novo input padrão do sistema, sozinho.
 
 ## Trocar o atalho
@@ -106,8 +107,10 @@ Criado pelo instalador a partir do `config.example.json`. Edite e reinicie o dit
 | `language` | `pt` | Troque pelo seu idioma (`en`, `es`...) ou `null` = detecção automática |
 | `beam_size` | `1` (CPU) / `5` (GPU) | Maior = mais preciso e mais lento |
 | `hotkey` | `ctrl+sys` | Atalho de ditado (segurar). Combine `ctrl`, `alt`, `shift`, `sys` com `+` |
+| `history_hotkey` | `ctrl+alt+h` | Abre a janela de histórico dos ditados |
 | `insert_mode` | `paste` | `paste` (clipboard + Ctrl/Cmd+V) ou `type` (digitação simulada) |
-| `restore_clipboard` | `true` | Restaura o clipboard anterior após colar |
+| `restore_clipboard` | `false` | `false` mantém o último ditado no clipboard (Ctrl+V recupera se a colagem falhar); `true` restaura o clipboard anterior |
+| `max_history` | `200` | Quantos ditados a janela de histórico (`Ctrl+Alt+H`) mostra |
 | `trailing_space` | `true` | Espaço ao final, para emendar ditados |
 | `wave_gain` | `12` | Sensibilidade visual da waveform |
 | `beeps` | `false` | Sinais sonoros de início/fim (só Windows) |

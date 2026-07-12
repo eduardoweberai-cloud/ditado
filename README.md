@@ -73,6 +73,7 @@ Extras:
 
 - Hotkey + any other key **cancels** the recording, so your system shortcuts (e.g. switching virtual desktops) keep working.
 - Quit the app: `Ctrl+Alt+F12`, or `parar-ditado.bat` (Windows) / `./ditado-stop.sh` (Mac/Linux).
+- **History (never lose a dictation):** `Ctrl+Alt+H` opens a window with everything you dictated, each item with a copy button. Every dictation is saved to `historico.jsonl`, so even if the paste finds no focused text field, the text is still there to copy.
 - Plugged in a headset? The next recording uses the new system default input automatically.
 
 ## Changing the hotkey
@@ -108,8 +109,10 @@ Created by the installer from `config.example.json`. Edit and restart Ditado.
 | `language` | `pt` | Set your language (`en`, `es`...) or `null` for auto-detect |
 | `beam_size` | `1` (CPU) / `5` (GPU) | Higher = more accurate and slower |
 | `hotkey` | `ctrl+sys` | Dictation hotkey (hold). Combine `ctrl`, `alt`, `shift`, `sys` with `+` |
+| `history_hotkey` | `ctrl+alt+h` | Opens the dictation history window |
 | `insert_mode` | `paste` | `paste` (clipboard + Ctrl/Cmd+V) or `type` (simulated typing) |
-| `restore_clipboard` | `true` | Restores the previous clipboard after pasting |
+| `restore_clipboard` | `false` | `false` keeps the last dictation on the clipboard (Ctrl+V recovers it if the paste failed); `true` restores the previous clipboard |
+| `max_history` | `200` | How many dictations the history window (`Ctrl+Alt+H`) shows |
 | `trailing_space` | `true` | Trailing space, to chain dictations |
 | `wave_gain` | `12` | Visual sensitivity of the waveform |
 | `beeps` | `false` | Start/stop sound cues (Windows only) |

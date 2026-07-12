@@ -1,5 +1,7 @@
 # Runtime e privacidade: log pode conter textos ditados (log_text=true)
 ditado.log
+# Historico de ditados (contem tudo que foi transcrito): pessoal, nunca versionar
+historico.jsonl
 __pycache__/
 *.pyc
 .venv/
