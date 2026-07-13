@@ -77,14 +77,26 @@ with mock.patch.object(ditado, "HISTORY_PATH", missing):
     check("historico inexistente retorna vazio", app._load_history() == [])
 
 
-# --- atalho Ctrl+Alt+H abre a janela --------------------------------------
-app = make_app()
-app._load_history = lambda: [{"ts": "2026-07-12 17:43:04", "text": "oi"}]
-with mock.patch.object(ditado, "mod_physically_down",
-                       side_effect=lambda m: m in ("ctrl", "alt")):
-    app.on_press(pkb.KeyCode.from_char("h"))
-check("Ctrl+Alt+H chama overlay.open_history",
-      app.overlay.open_history.called)
+# --- key_matches_char (robusto ao control-char do Ctrl) --------------------
+check("key_matches_char: 'h' simples",
+      ditado.key_matches_char(pkb.KeyCode.from_char("h"), "h"))
+# Com Ctrl pressionado o Windows entrega char='\x08' e vk=72 (nao 'h'):
+check("key_matches_char: Ctrl+H (vk=72, control-char)",
+      ditado.key_matches_char(pkb.KeyCode(vk=72, char="\x08"), "h"))
+check("key_matches_char: tecla errada nao casa",
+      not ditado.key_matches_char(pkb.KeyCode.from_char("j"), "h"))
+
+
+# --- atalho Ctrl+Alt+H abre a janela, inclusive com o control-char ---------
+for label, key in (("char 'h'", pkb.KeyCode.from_char("h")),
+                   ("Ctrl+H real (vk=72, \\x08)", pkb.KeyCode(vk=72, char="\x08"))):
+    app = make_app()
+    app._load_history = lambda: [{"ts": "2026-07-12 17:43:04", "text": "oi"}]
+    with mock.patch.object(ditado, "mod_physically_down",
+                           side_effect=lambda m: m in ("ctrl", "alt")):
+        app.on_press(key)
+    check(f"Ctrl+Alt+H abre a janela ({label})",
+          app.overlay.open_history.called)
 
 # uma letra qualquer sem os modificadores NAO abre a janela
 app = make_app()

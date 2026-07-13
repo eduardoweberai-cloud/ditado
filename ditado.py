@@ -203,6 +203,23 @@ def parse_combo_key(spec, default_mods, default_char):
     return mods, char, label
 
 
+def key_matches_char(key, ch):
+    """True se o evento de teclado corresponde a letra `ch`, robusto a
+    modificadores. Com Ctrl pressionado o Windows entrega o control char
+    (Ctrl+H -> '\\x08') em vez de 'h', entao comparamos pelo vk (estavel),
+    com fallback para char e para o proprio control char."""
+    kc = getattr(key, "char", None)
+    if kc == ch:
+        return True
+    vk = getattr(key, "vk", None)
+    if vk is not None and vk in (ord(ch.upper()), ord(ch.lower())):
+        return True
+    if kc and len(kc) == 1 and ord(kc) < 0x20 and \
+            ord(kc) == ord(ch.upper()) - 64:
+        return True
+    return False
+
+
 def add_cuda_dll_dirs():
     """Windows: registra as DLLs de cuBLAS/cuDNN instaladas via pip (wheels
     nvidia-*) para o ctranslate2 achar CUDA sem instalacao de sistema.
@@ -600,7 +617,6 @@ class App:
         self.history_mods, self.history_char, self.history_label = \
             parse_combo_key(self.cfg.get("history_hotkey", "ctrl+alt+h"),
                             {"ctrl", "alt"}, "h")
-        self._history_key = pkb.KeyCode.from_char(self.history_char)
         # estado "esta pressionada?" de cada modificador usado + ctrl/alt
         # (ctrl/alt entram sempre por causa do quit Ctrl+Alt+F12)
         self.held = {m: False for m in
@@ -677,7 +693,7 @@ class App:
                         and key == pkb.Key.f12:
                     self.quit()
                     return
-                if key == self._history_key and \
+                if key_matches_char(key, self.history_char) and \
                         all(self.held.get(m) for m in self.history_mods):
                     self.overlay.open_history(self._load_history())
                     return
